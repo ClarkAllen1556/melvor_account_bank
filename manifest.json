@@ -1,5 +1,5 @@
 {
-  "namespace": "mbts",
+  "namespace": "ac_1556_melvor_mod",
   "icon": "img/icon.png",
   "setup": "setup.mjs",
   "load": ["templates.min.html"]
