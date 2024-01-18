@@ -1,6 +1,5 @@
 import { effect, signal } from "@preact/signals";
 import { html } from "htm/preact";
-import { reactive } from "petite-vue";
 import { h, render } from "preact";
 
 function readSharedItems() {
