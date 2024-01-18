@@ -6,3 +6,9 @@ declare module "*.png" {
 type Component<T> = {
   [P in keyof T]: T[P];
 } & { $template: string; }
+
+type StoredItem = {
+  id: Item["id"]
+  qty: number,
+  source: string
+}
