@@ -4,10 +4,12 @@
     "noImplicitAny": true,
     "module": "es6",
     "target": "es6",
-    "jsx": "react",
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "allowJs": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "sourceMap": true
   }
 }

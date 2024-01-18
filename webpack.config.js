@@ -3,7 +3,7 @@ const path = require('path');
 
 module.exports = {
   mode: 'production',
-  entry: './src/ts/setup.ts',
+  entry: './src/ts/setup.tsx',
   experiments: {
     outputModule: true
   },
