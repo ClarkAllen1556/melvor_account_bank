@@ -3,12 +3,16 @@ declare module "*.png" {
   export default value;
 }
 
-type Component<T> = {
+declare type Component<T> = {
   [P in keyof T]: T[P];
 } & { $template: string; }
 
-type StoredItem = {
+declare type StoredItem = {
   id: Item["id"]
   qty: number,
   source: string
+}
+
+declare interface StoredItems {
+  [K: StoredItem["id"]]: StoredItem;
 }
