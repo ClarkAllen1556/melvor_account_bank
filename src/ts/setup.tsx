@@ -4,13 +4,9 @@ import {
   selectedBankItem,
 } from "../components/MoveToShareBankFormElement";
 import { ShareBank } from "../components/ShareBank";
-import ModData from "../data/data.json";
 import "../css/styles.css";
-import "../img/icon.png";
 
 export async function setup(ctx: Modding.ModContext) {
-  await ctx.gameData.addPackage(ModData);
-
   ctx.patch(BankTabMenu, "initialize").after(() => {
     const root = document.createElement("div");
     render(<ShareBank ctx={ctx} />, root);

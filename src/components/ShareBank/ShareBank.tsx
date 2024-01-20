@@ -70,7 +70,9 @@ function SharedItem(
 
 export function ShareBank({ ctx }: { ctx: Modding.ModContext }) {
   sharedStorage.value = readFromStorage(ctx);
-  const hasSharedItems = !!Object.values(sharedStorage.value);
+  const hasSharedItems = sharedStorage.value
+    ? Object.values(sharedStorage.value).length > 0
+    : false
 
   function handleItemClick(item: AnyItem, qty: number) {
     game.bank.addItemByID(

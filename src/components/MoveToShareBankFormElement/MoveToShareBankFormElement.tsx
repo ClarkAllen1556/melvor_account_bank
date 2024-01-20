@@ -30,7 +30,7 @@ export function MoveToShareBankForm({ ctx }: { ctx: Modding.ModContext }) {
       qty: transferQuantity.value,
       source: game.characterName,
     };
-    let storedItems: StoredItems = JSON.parse(localStorage.getItem(storageKey));
+    let storedItems = sharedStorage?.value ?? {} as StoredItems;
     storedItems.createdAt = new Date();
 
     if (storedItems[item.id]) {
@@ -39,15 +39,24 @@ export function MoveToShareBankForm({ ctx }: { ctx: Modding.ModContext }) {
       storedItems[item.id] = item;
     }
 
-    writeToStorage(storedItems, ctx);
+    try {
+      writeToStorage(storedItems, ctx);
 
-    game.bank.removeItemQuantity(
-      selectedBankItem.value.item,
-      transferQuantity.value,
-      false,
-    );
+      game.bank.removeItemQuantity(
+        selectedBankItem.value.item,
+        transferQuantity.value,
+        false,
+      );
 
-    sharedStorage.value = { ...storedItems };
+      sharedStorage.value = { ...storedItems };
+    } catch (e) {
+      console.error("Error occurred while writing to storage", e);
+
+      SwalLocale.fire(
+        "Shared Bank",
+        "An error occured while writing to shared storage. No items have been removed from your inventory.",
+      );
+    }
   }
 
   function setTransferAmountByPercentage(p: number) {
