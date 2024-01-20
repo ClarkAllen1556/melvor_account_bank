@@ -25,6 +25,9 @@ module.exports = {
       ]
     })
   ],
+  optimization: {
+    minimize: true,
+  },
   module: {
     generator: {
       'asset/resource': {
