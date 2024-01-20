@@ -15,22 +15,23 @@ export async function setup(ctx: Modding.ModContext) {
     const root = document.createElement("div");
     render(<ShareBank ctx={ctx} />, root);
 
-    const openShareBankRoot = document.createElement("div");
+    // Shared Bank button
+    const openShareBankRoot = document.createElement("li");
+    openShareBankRoot.classList.add("nav-item");
+    openShareBankRoot.style.marginBlock = "auto";
     render(
-      <button class="btn btn-info" onClick={() => open(ctx, root)}>
-        Share Bank
+      <button
+        class="btn btn-info"
+        style={{ marginBlock: "auto " }}
+        onClick={() => open(ctx, root)}
+      >
+        Shared Bank
       </button>,
       openShareBankRoot,
     );
 
-    bankTabMenu.appendChild(openShareBankRoot)
-
-    sidebar.category('Shared').item('Shared Bank', {
-      onClick() {
-        open(ctx, root);
-      },
-    });
-  })
+    bankSideBarMenu.children[0].appendChild(openShareBankRoot);
+  });
 
   ctx.patch(BankItemSettingsMenu, "setItem").after((_, item, game) => {
     selectedBankItem.value = item;

@@ -13,6 +13,10 @@ declare type StoredItem = {
   source: string
 }
 
-declare interface StoredItems {
-  [K: StoredItem["id"]]: StoredItem;
+declare interface Storage {
+  createdAt: Date;
 }
+
+declare type StoredItems = {
+  [K: StoredItem["id"]]: StoredItem;
+} & Storage
