@@ -1,6 +1,5 @@
 {
-  "namespace": "ac_1556_melvor_mod",
-  "icon": "img/icon.png",
+  "namespace": "acc_bank_melvor",
   "setup": "setup.mjs",
   "load": ["templates.min.html"]
 }

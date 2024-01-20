@@ -1,10 +1,9 @@
 {
   "name": "melvor-account-bank",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "pack": "webpack",
     "zip": "node scripts/zip.js",
     "build": "webpack && node scripts/bundleHtml.js",
