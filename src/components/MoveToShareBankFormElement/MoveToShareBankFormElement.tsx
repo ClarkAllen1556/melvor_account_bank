@@ -1,15 +1,14 @@
 import { signal } from "@preact/signals";
 import { currentStorageQty, sharedStorage } from "../ShareBank";
 
+export const STORAGE_KEY = `mlv-item-shared-items` as const;
+export const MAX_SHARE_AMOUNT = 75 as const;
+
 export const selectedBankItem = signal<BankItem | null>(null);
-export const storageKey = `mlv-item-shared-items` as const;
-export const MAX_SHARE_AMOUNT = 10;
 
-export function writeToStorage(items: StoredItems, ctx: Modding.ModContext) {
-  ctx.accountStorage.setItem(storageKey, items);
-
+export function writeToStorage(items: StoredItems) {
   localStorage.setItem(
-    storageKey,
+    STORAGE_KEY,
     JSON.stringify(items),
   );
 }
@@ -18,6 +17,7 @@ const transferQuantity = signal<number>(0);
 const isShareFull = signal<boolean>(
   currentStorageQty.value >= MAX_SHARE_AMOUNT,
 );
+const showMovedNotice = signal<boolean>(false);
 
 export function MoveToShareBankForm({ ctx }: { ctx: Modding.ModContext }) {
   function transferItems() {
@@ -40,13 +40,25 @@ export function MoveToShareBankForm({ ctx }: { ctx: Modding.ModContext }) {
     }
 
     try {
-      writeToStorage(storedItems, ctx);
+      writeToStorage(storedItems);
 
       game.bank.removeItemQuantity(
         selectedBankItem.value.item,
         transferQuantity.value,
         false,
       );
+      game.notifications.addNotification(
+        new RemoveItemNotification(selectedBankItem.value.item),
+        {
+          text: `${selectedBankItem.value.item.name} moved to shared bank`,
+          quantity: -item.qty,
+          media: selectedBankItem.value.item.media,
+          isImportant: false,
+          isError: false,
+        },
+      );
+
+      toggleMoveNotice();
 
       sharedStorage.value = { ...storedItems };
     } catch (e) {
@@ -63,15 +75,20 @@ export function MoveToShareBankForm({ ctx }: { ctx: Modding.ModContext }) {
     const franctionalAmount = Math.floor(selectedBankItem.value.quantity * p);
 
     transferQuantity.value = franctionalAmount;
+  }
 
-    console.log("frac >>", franctionalAmount);
-    console.log("trans qty >>", transferQuantity.value);
+  function toggleMoveNotice() {
+    showMovedNotice.value = true;
+
+    setTimeout(() => {
+      showMovedNotice.value = false;
+    }, 1500);
   }
 
   if (!selectedBankItem.value) return null;
 
   return (
-    <div class="col-12">
+    <>
       <div class="block block-rounded-double bg-combat-inner-dark">
         <div class="block-header block-header-default bg-dark-bank-block-header px-3 py-1">
           <h5 class="font-size-sm font-w600 mb-0">
@@ -135,8 +152,15 @@ export function MoveToShareBankForm({ ctx }: { ctx: Modding.ModContext }) {
               >
                 100%
               </button>
+
+              {showMovedNotice.value && (
+                <strong>
+                  Item(s) have been moved!
+                </strong>
+              )}
+
               <button
-                disabled={isShareFull.value}
+                disabled={isShareFull.value || showMovedNotice.value}
                 class="btn btn-danger"
                 style={{
                   marginBlock: "6px",
@@ -150,6 +174,6 @@ export function MoveToShareBankForm({ ctx }: { ctx: Modding.ModContext }) {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 import { effect, signal } from "@preact/signals";
 import {
   MAX_SHARE_AMOUNT,
-  storageKey,
+  STORAGE_KEY,
   writeToStorage,
 } from "../MoveToShareBankFormElement";
 
@@ -12,30 +12,16 @@ effect(() => {
   if (!sharedStorage.value) {
     currentStorageQty.value = 0;
   } else {
-    currentStorageQty.value = Object.keys(sharedStorage.value).length;
+    currentStorageQty.value = Object.keys(sharedStorage.value).length - 1;
   }
 });
 
-function readFromStorage(ctx: Modding.ModContext): StoredItems {
-  const accStore: StoredItems = ctx.accountStorage.getItem(storageKey);
-  const localStore: StoredItems = JSON.parse(localStorage.getItem(storageKey));
+function readFromStorage(): StoredItems {
+  const localStore: StoredItems = JSON.parse(localStorage.getItem(STORAGE_KEY));
 
-  if (!accStore) {
-    if (!localStore) return null;
+  if (!localStore) return null;
 
-    return { ...localStore };
-  }
-
-  const accStoreLastUpdated = new Date(accStore.createdAt);
-  const localStoreLastUpdated = new Date(localStore.createdAt);
-
-  if (accStoreLastUpdated < localStoreLastUpdated) {
-    ctx.accountStorage.setItem(storageKey, localStore);
-
-    return { ...localStore };
-  }
-
-  return { ...accStore };
+  return { ...localStore };
 }
 
 interface SharedItemProps {
@@ -69,10 +55,10 @@ function SharedItem(
 }
 
 export function ShareBank({ ctx }: { ctx: Modding.ModContext }) {
-  sharedStorage.value = readFromStorage(ctx);
+  sharedStorage.value = readFromStorage();
   const hasSharedItems = sharedStorage.value
     ? Object.values(sharedStorage.value).length > 0
-    : false
+    : false;
 
   function handleItemClick(item: AnyItem, qty: number) {
     game.bank.addItemByID(
@@ -89,7 +75,7 @@ export function ShareBank({ ctx }: { ctx: Modding.ModContext }) {
     updatedStoredItems.createdAt = new Date();
     delete updatedStoredItems[item.id];
 
-    writeToStorage(updatedStoredItems, ctx);
+    writeToStorage(updatedStoredItems);
 
     sharedStorage.value = { ...updatedStoredItems };
   }
@@ -98,6 +84,18 @@ export function ShareBank({ ctx }: { ctx: Modding.ModContext }) {
 
   return (
     <>
+      <details style={{ marginBottom: "6px" }}>
+        <summary>
+          Notice about shared bank.
+        </summary>
+        <p>
+          <em>
+            Items in the shared bank are inaccessible on the player's other
+            devices. They return to normal when placed back in a character's
+            bank.
+          </em>
+        </p>
+      </details>
       <div
         style={{
           display: "flex",
@@ -125,13 +123,13 @@ export function ShareBank({ ctx }: { ctx: Modding.ModContext }) {
         ))}
       </div>
       <div>
-        <p>
-          Current storage:{" "}
+        <p style={{ display: "inline" }}>
+          <em style={{ marginRight: "6px" }}>Using:</em>
           <strong>{currentStorageQty.value} / {MAX_SHARE_AMOUNT}</strong>
         </p>
         <button
-          class="btn btn-danger"
-          onClick={() => sharedStorage.value = readFromStorage(ctx)}
+          class="btn btn-link"
+          onClick={() => sharedStorage.value = readFromStorage()}
         >
           Refresh
         </button>
