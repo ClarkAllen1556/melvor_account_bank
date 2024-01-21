@@ -1,4 +1,4 @@
-import { h, render } from "preact";
+import { render } from "preact";
 import {
   MoveToShareBankForm,
   selectedBankItem,
@@ -12,12 +12,11 @@ export async function setup(ctx: Modding.ModContext) {
     render(<ShareBank ctx={ctx} />, root);
 
     // Shared Bank button
-    const openShareBankRoot = document.createElement("li");
-    openShareBankRoot.classList.add("nav-item");
-    openShareBankRoot.style.marginBlock = "auto";
+    const openShareBankRoot = document.createElement("span");
+
     render(
       <button
-        class="btn btn-info"
+        class="btn btn-info m-1"
         style={{ marginBlock: "auto " }}
         onClick={() => open(ctx, root)}
       >
@@ -26,7 +25,12 @@ export async function setup(ctx: Modding.ModContext) {
       openShareBankRoot,
     );
 
-    bankSideBarMenu.children[0].appendChild(openShareBankRoot);
+    bankOptionsMenu
+      .children[0]
+      .querySelector('.row')
+      .children[0]
+      .children[0]
+      .appendChild(openShareBankRoot);
   });
 
   ctx.patch(BankItemSettingsMenu, "setItem").after((_, item, game) => {
@@ -39,8 +43,11 @@ export async function setup(ctx: Modding.ModContext) {
 
   ctx.patch(BankItemSettingsMenu, "initialize").after((returnValue, game) => {
     const root = document.createElement("div");
+    root.classList.add('col-13')
+
     render(<MoveToShareBankForm ctx={ctx} />, root);
-    bankSideBarMenu.appendChild(root);
+
+    bankSideBarMenu.children[1].appendChild(root);
   });
 }
 
