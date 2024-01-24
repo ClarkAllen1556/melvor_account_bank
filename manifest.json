@@ -1,5 +1,4 @@
 {
   "namespace": "acc_bank_melvor",
-  "setup": "setup.mjs",
-  "load": ["templates.min.html"]
+  "setup": "setup.mjs"
 }
