@@ -128,3 +128,6 @@ dist
 
 # Other
 package/
+
+server/pb_data
+server/fly.toml
