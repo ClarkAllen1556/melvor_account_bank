@@ -1,9 +1,9 @@
 import { effect, signal } from "@preact/signals";
 import {
   MAX_SHARE_AMOUNT,
-  STORAGE_KEY,
-  writeToStorage,
 } from "../MoveToShareBankFormElement";
+import { readFromDatabase, writeToStorage } from "../../api";
+import { STORAGE_KEY } from "../../constants";
 
 export const sharedStorage = signal<StoredItems | null>(null);
 export const currentStorageQty = signal<number>(0);
@@ -55,6 +55,8 @@ function SharedItem(
 }
 
 export function ShareBank({ ctx }: { ctx: Modding.ModContext }) {
+  readFromDatabase();
+
   sharedStorage.value = readFromStorage();
   const hasSharedItems = sharedStorage.value
     ? Object.values(sharedStorage.value).length > 0

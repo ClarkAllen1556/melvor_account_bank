@@ -1,17 +1,9 @@
 import { signal } from "@preact/signals";
 import { currentStorageQty, sharedStorage } from "../ShareBank";
+import { writeToDatabase, writeToStorage } from "../../api";
 
-export const STORAGE_KEY = `mlv-item-shared-items` as const;
 export const MAX_SHARE_AMOUNT = 75 as const;
-
 export const selectedBankItem = signal<BankItem | null>(null);
-
-export function writeToStorage(items: StoredItems) {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(items),
-  );
-}
 
 const transferQuantity = signal<number>(0);
 const isShareFull = signal<boolean>(
@@ -20,7 +12,7 @@ const isShareFull = signal<boolean>(
 const showMovedNotice = signal<boolean>(false);
 
 export function MoveToShareBankForm({ ctx }: { ctx: Modding.ModContext }) {
-  function transferItems() {
+  async function transferItems() {
     if (!selectedBankItem.value?.item) return;
     if (transferQuantity.value <= 0) return;
     if (transferQuantity.value > selectedBankItem.value.quantity) return;
@@ -32,6 +24,8 @@ export function MoveToShareBankForm({ ctx }: { ctx: Modding.ModContext }) {
     };
     let storedItems = sharedStorage?.value ?? {} as StoredItems;
     storedItems.createdAt = new Date();
+
+    await writeToDatabase(item);
 
     if (storedItems[item.id]) {
       storedItems[item.id].qty += item.qty;
