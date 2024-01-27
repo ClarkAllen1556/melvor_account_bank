@@ -359,23 +359,23 @@ declare namespace Modding {
       /** Type of the setting. */
       type: string;
       /** Name of the setting. This is the value used for the HTML `id` attribute. */
-      name: string;
+      name?: string;
       /** The default value, used for initial values and upon resetting defaults. */
-      default: primitive | primitive[];
+      default?: primitive | primitive[];
       /** Text label for the input. */
-      label: string;
+      label?: string;
       /** Extra text to be displayed below the label in a smaller font. */
-      hint: string;
+      hint?: string;
       /** Stub for settings with dropdowns. */
       options?: unknown;
       /** Method responsible for generating the HTML for the input. */
-      render(name: string, onChange: () => void, config: SettingConfig): HTMLElement;
+      render?(name: string, onChange: () => void, config: SettingConfig): HTMLElement;
       /** Method that handles user input. Return `false` to prevent the value from changing. Return a string to prevent the value from changing and display a validation error. */
-      onChange(value: unknown, previousValue: unknown): void | boolean | string;
+      onChange?(value: unknown, previousValue: unknown): void | boolean | string;
       /** Method responsible for retrieving the current value from the setting's HTML. Must return a value that can be converted to JSON. */
-      get(root: HTMLElement): unknown;
+      get?(root: HTMLElement): unknown;
       /** Method responsible for handling how data is inserted into the setting's HTML. */
-      set(root: HTMLElement, value: unknown): void;
+      set?(root: HTMLElement, value: unknown): void;
     }
 
     /** Configuration object for text input setting type. */
@@ -526,7 +526,7 @@ declare namespace Modding {
     /** A modified stack trace from the original error, with resource URLs replaced with the mod url */
     stack: string
   }
-  
+
   /** A mod's categorized tags. */
   interface ModTags {
     /** The mod's supported platforms (Steam, Browser, iOS, Android). */
@@ -669,7 +669,7 @@ declare namespace Modding {
   }
 
   type SerializedCharacterStorageData = [string, unknown];
-  
+
   type SerializedCharacterData = [ModId, Settings.SerializedSection[] | null, SerializedCharacterStorageData[] | null];
 
   type SerializedAccountStorageData = [number, [string, any][]];
@@ -691,7 +691,7 @@ declare namespace Modding {
   type ToGameDataAdders<T> = {
     [Property in keyof T]: GameDataAdder<T[Property]>;
   }
-  
+
   /** Maps each property of T to a GameDataModifier */
   type ToGameDataModifiers<T> = {
     [Property in keyof T]: GameDataModifier<T[Property]>;
