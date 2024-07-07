@@ -27,6 +27,8 @@ interface Action extends NamespacedObject {
   renderModifierChange?(): void;
   /** Optional. Called when the the specified item's quantity changes in the bank, and the player is on a page associated with the action. Utilized to queue up renders required on the action's page. */
   queueBankQuantityRender?(item: AnyItem): void;
+  /** Optional. Called when the specified currencies quantity changes, and the player is on a page associated with the action. Utilized to queue up renders required on the action's page. */
+  queueCurrencyQuantityRender?(currency: Currency): void;
 }
 /** Action that has behaviour that is always active */
 interface PassiveAction extends Action {
@@ -45,21 +47,10 @@ interface ActiveAction extends Action {
   activeSkills: AnySkill[];
   /** Optional. Called when player modifiers change, and this action is the current active action. */
   onModifierChangeWhileActive?(): void;
-}
-/** Provides modifiers or stats to the Player or Enemy class */
-interface StatProvider {
-  /** Modifiers that apply to the player */
-  modifiers?: MappedModifiers;
-  /** Modifiers that apply to enemies */
-  enemyModifiers?: TargetModifiers;
-  /** Modifiers that can apply to the player/enemy that only apply based on a condition */
-  conditionalModifiers?: ConditionalModifier[];
-  /** Equipment stats that apply to the player */
-  equipmentStats?: EquipStatPair[];
-}
-/** Provides modifiers or stats to the Player/Enemy class in Golbin Raid */
-interface RaidStatProvider {
-  raidStats: StatProvider
+  /** Optional. Called before offline progress occurs, and this action is the current active action. State storage is to be handled by the Action class */
+  createOfflineSnapshot?(): void;
+  /** Optional, Called when generating an offline modal, and this action was/is the current active action. Intended to parse state changes from createOfflineSnapShot */
+  getOfflineMessages?(): string[];
 }
 interface SkillCategoryObject<CategoryType extends SkillCategory> {
   categories: NamespaceRegistry<CategoryType>

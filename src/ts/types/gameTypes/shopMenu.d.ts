@@ -5,6 +5,7 @@ declare class ShopCostsAndUnlock {
     requirementElements: ShopUnlockElement[];
     costElements: ShopCostElement[];
     buyLimit?: HTMLSpanElement;
+    costFlex: HTMLDivElement;
     get buyQty(): number;
     constructor(purchase: ShopPurchase, game: Game, costContainer: HTMLElement);
     updatePurchaseRequirements(): void;
@@ -18,11 +19,8 @@ declare class ShopCostsAndUnlock {
     setElementMet(element: HTMLElement, met: boolean): void;
     setUnlockElementMet(element: ShopUnlockElement, met: boolean): void;
     updateCostElement(element: ShopCostElement, met: boolean, amount: number): void;
-    getCostQty(amount: ShopCostAmount): number;
-    isGPCostMet(amount: number): boolean;
-    isSlayerCoinCostMet(amount: number): boolean;
+    getCostQty(amount: AnyShopCost): number;
     isItemCostMet(item: AnyItem, baseQty: number): boolean;
-    isRaidCoinCostMet(amount: number): boolean;
     getTextClass(met: boolean): "text-success" | "text-danger";
     getSlayerTaskUnlockText(requirement: SlayerTaskRequirement): string;
     createUnlockElement(costNodes: (string | Node)[], met: boolean): ShopUnlockElement;
@@ -134,6 +132,7 @@ declare class ShopMenu {
     quickbuyContainer: HTMLElement;
     quickBuyButton: HTMLElement;
     constructor(game: Game, containerID?: string, quickBuyID?: string);
+    shouldShowCategory(category: ShopCategory): boolean;
     /** Creates a new tab for the given category */
     createShopTab(category: ShopCategory): {
         menu: ShopTabMenu;
@@ -154,6 +153,7 @@ declare class ShopMenu {
     hideTab(category: ShopCategory): void;
     showCategoryButton(category: ShopCategory): void;
     hideCategoryButton(category: ShopCategory): void;
+    static NON_RAID_CURRENCIES: string[];
     showAllTabsButRaid(): void;
     showAllRaidTabs(): void;
     hideAllTabs(): void;

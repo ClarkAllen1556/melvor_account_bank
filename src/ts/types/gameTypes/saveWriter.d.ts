@@ -14,7 +14,9 @@ declare class BinaryWriter {
     markRegionOffset: number;
     /** Returns the number of bytes remaining in the data buffer */
     get remainingBytes(): number;
-    constructor(mode: 'Read' | 'Write', dataExtensionLength: number);
+    /** Returns the number of bytes in the ArrayBuffer of the writer */
+    get dataSize(): number;
+    constructor(mode: 'Read' | 'Write', dataExtensionLength: number, initialSize?: number);
     /** Checks if the current buffer can fit the specified number of bytes
      *  If it cannot, extends the buffer by the dataExtensionLength until it can
      */
@@ -63,6 +65,12 @@ declare class BinaryWriter {
      */
     getMap<T, U>(decodeKey: (reader: this) => T | undefined, decodeValue: (reader: this, key: T | undefined) => U | undefined): Map<T, U>;
     /**
+     * Skips data that was written using the writeMap method.
+     * @param skipKey Function that skips bytes for the decodeKey function
+     * @param skipValue Function that skips bytes for the decodeValue function
+     */
+    skipMap(skipKey: (reader: this) => void, skipValue: (reader: this) => void): void;
+    /**
      * Gets a map with a key and value type that require eachother to decode. If decode returns undefined, value is ommited.
      * @param decode Function that performs read operations to obtain both the key and value
      * @returns The decoded map
@@ -71,6 +79,21 @@ declare class BinaryWriter {
         key: T;
         value: U;
     } | undefined): Map<T, U>;
+    /**
+     * Skips data that was written using the writeComplexMap method.
+     * @param skip Function that skips the bytes for the decode function
+     */
+    skipComplexMap(skip: (reader: this) => void): void;
+    /**
+     * Gets a SparseNumericMap with the specified key type
+     * @param decodeKey Function that performs read operations to obtain a map key. Returning undefined will skip the value in the map
+     */
+    getSparseNumericMap<T>(decodeKey: (reader: this) => T | undefined): SparseNumericMap<T>;
+    /**
+     * Skips data that was written using the writeSpareNumericMap method
+     * @param skipKey Funciton that skips the bytes for the decodeKey function
+     */
+    skipSparseNumericMap(skipKey: (reader: this) => void): void;
     /**
      * Gets a set of arbitrary value type. If value method returns undefined, value is not added.
      * @param decodeValue Function that performs read operations to obtain a set value
@@ -81,6 +104,12 @@ declare class BinaryWriter {
     getBuffer(): ArrayBuffer;
     /** Gets a buffer of a fixed length */
     getFixedLengthBuffer(length: number): ArrayBuffer;
+    /**
+     * Gets a LinkQueue of arbitrary type
+     * @param decodeValue Decodes a single value in the queue. If it returns undefined, no value is added to the queue
+     * @returns The decoded LinkQueue
+     */
+    getLinkQueue<T>(decodeValue: (reader: this) => T | undefined): LinkQueue<T>;
     /** Tells the reader to skip ahead by length bytes */
     skipBytes(length: number): void;
     /** Tells the reader to skip ahead as if an array with elements that encoded elementByteLength bytes each */
@@ -129,11 +158,23 @@ declare class BinaryWriter {
      */
     writeComplexMap<T, U>(map: Map<T, U>, encode: (key: T, value: U, writer: this) => void): void;
     /**
+     * Writes a sparse numeric map to the buffer. Numeric values will be written as float64
+     * @param map The map to write
+     * @param encodeKey Function that encodes the value of the map's keys
+     */
+    writeSparseNumericMap<T>(map: SparseNumericMap<T>, encodeKey: (key: T, writer: this) => void): void;
+    /**
      * Writes a set of arbitrary type to the buffer
      * @param set The set to write
      * @param encodeValue Function that performs write operations per set value
      */
     writeSet<T>(set: Set<T>, encodeValue: (value: T, writer: this) => void): void;
+    /**
+     * Write a LinkQueue of arbitrary type to the buffer
+     * @param queue The LinkQueue to write
+     * @param encodeValue Function that encodes each value in the queue to the buffer
+     */
+    writeLinkQueue<T>(queue: LinkQueue<T>, encodeValue: (value: T, writer: this) => void): void;
     /** Writes an array buffer to the buffer */
     writeBuffer(buffer: ArrayBuffer): void;
     /** Writes a buffer of a fixed length */
@@ -151,14 +192,19 @@ declare class SaveWriter extends BinaryWriter {
     namespaceMap: Map<string, Map<string, number>>;
     nextNumericID: number;
     numericToStringIDMap: Map<number, string>;
-    constructor(mode: 'Read' | 'Write', dataExtensionLength: number);
+    get headerSize(): number;
+    constructor(mode: 'Read' | 'Write', dataExtensionLength: number, initialBodySize?: number, initialHeaderSize?: number);
     writeNamespacedObject<T extends NamespacedObject>(object: T): void;
+    /** Gets the ID of a namespaced object written via writeNamespacedObject */
+    getNamespacedObjectId(): string;
     /** Gets a namespaced object from a registry. If the object is not registered, returns the ID instead. */
     getNamespacedObject<T extends NamespacedObject>(registry: NamespaceRegistry<T>): T | string;
-    writeCombatModifierArray(modifiers: CombatModifierArray): void;
-    writeModifierArray(modifiers: ModifierArray): void;
-    getCombatModifierArray(): CombatModifierArray;
-    getModifierArray(game: Game): ModifierArray;
+    /** @deprecated Used only for Save compatability. */
+    getModifierValueFromKey(key: string, game: Game): ModifierValue | undefined;
+    /** @deprecated Used only for Save compatability. */
+    getSkillModifierValuesFromKey(key: string, game: Game): ModifierValue[];
+    writeModifierValues(modifiers: IModifierValue[]): void;
+    getModifierValues(game: Game, version: number): ModifierValue[];
     writeHeaderInfo(headerInfo: SaveGameHeader): void;
     getHeaderFromSaveString(saveString: string, game: Game): SaveGameHeader;
     getSaveString(headerInfo: SaveGameHeader): string;
@@ -170,5 +216,6 @@ declare const writeNamespaced: (object: NamespacedObject, writer: SaveWriter) =>
 declare function readNamespacedReject<T extends NamespacedObject>(registry: NamespaceRegistry<T>): (reader: SaveWriter) => T | undefined;
 declare const writeEncodable: (object: EncodableObject, writer: SaveWriter) => void;
 declare const writeItemQuantity: (quantity: AnyItemQuantity, writer: SaveWriter) => void;
-declare const writeAttackEffect: (game: Game, attack: SpecialAttack) => (effect: AnyEffect, writer: SaveWriter) => void;
-declare function readAttackEffect(reader: SaveWriter, game: Game, attack: SpecialAttack | undefined): AnyEffect | undefined;
+declare function skipAttackEffectData(reader: SaveWriter): void;
+/** Utility method for dumping bytes from a SaveWriter */
+declare const skipBytes: (bytes: number) => (reader: SaveWriter) => void;

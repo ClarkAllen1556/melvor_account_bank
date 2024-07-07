@@ -2,6 +2,7 @@ interface ShopCategoryData extends IDData {
     name: string;
     media: string;
     isGolbinRaid?: boolean;
+    allowedGamemodeIDs?: string[];
 }
 declare class ShopCategory extends NamespacedObject {
     get name(): string;
@@ -9,6 +10,7 @@ declare class ShopCategory extends NamespacedObject {
     _name: string;
     _media: string;
     isGolbinRaid: boolean;
+    allowedGamemodes: Set<Gamemode>;
     constructor(namespace: DataNamespace, data: ShopCategoryData, game: Game);
 }
 declare type OldShopCategory = 'General' | 'SkillUpgrades' | 'Slayer' | 'Gloves' | 'Skillcapes' | 'SuperiorSkillcapes' | 'Materials' | 'GolbinRaid' | 'Township';
@@ -32,10 +34,26 @@ declare type GloveCost = {
     type: 'Glove';
     cost: number;
 };
-declare type ShopCostAmount = FixedCost | LinearCost | BankSlotCost | GloveCost;
-/** Returns true if the ShopCostAmount will always be nothing */
-declare function isShopCostZero(cost: ShopCostAmount): boolean;
+declare type AnyShopCost = FixedCost | LinearCost | BankSlotCost | GloveCost;
+declare type ShopCurrencyCostData = AnyShopCost & {
+    /** The ID of the currency */
+    currency: string;
+};
+declare type ShopCurrencyCost = AnyShopCost & {
+    currency: Currency;
+};
+/**
+ * @deprecated TODO_D - remove this once old currency props removed
+ * Returns true if the ShopCostAmount will always be nothing */
+declare function isShopCostZero(cost: AnyShopCost): boolean;
 declare type CurrentShopDescription = 'PercentIncrease' | 'PercentDecrease' | 'Increase' | 'Decrease' | 'SecondsIncrease' | 'SecondsDecrease';
+interface ShopPurchaseContainsData extends IStatObjectData {
+    items: IDQuantity[];
+    itemCharges?: IDQuantity;
+    petID?: string;
+    lootBox?: boolean;
+    bankTab?: boolean;
+}
 interface ShopPurchaseData extends IDData {
     /** Custom name for the purchase. Overrides name based on purchase contents. */
     customName?: string;
@@ -43,19 +61,8 @@ interface ShopPurchaseData extends IDData {
     customDescription?: string;
     media: string;
     category: string;
-    contains: {
-        items: IDQuantity[];
-        itemCharges?: IDQuantity;
-        modifiers?: PlayerModifierData;
-        petID?: string;
-        lootBox?: boolean;
-    };
-    cost: {
-        gp: ShopCostAmount;
-        slayerCoins: ShopCostAmount;
-        items: IDQuantity[];
-        raidCoins: ShopCostAmount;
-    };
+    contains: ShopPurchaseContainsData;
+    cost: ShopCostData;
     allowQuantityPurchase: boolean;
     /** Previous shop purchases required for item to show in shop */
     unlockRequirements: ShopPurchaseRequirementData[];
@@ -70,6 +77,21 @@ interface ShopPurchaseData extends IDData {
     }[];
     showBuyLimit: boolean;
     currentDescription?: CurrentShopDescription;
+    allowedGamemodeIDs?: string[];
+}
+interface ShopCostData {
+    /** @deprecated Use currencies prop instead */
+    gp?: AnyShopCost;
+    /** @deprecated Use currencies prop instead */
+    slayerCoins?: AnyShopCost;
+    /** @deprecated Use currencies prop instead */
+    raidCoins?: AnyShopCost;
+    currencies?: ShopCurrencyCostData[];
+    items: IDQuantity[];
+}
+interface ShopCost {
+    currencies: ShopCurrencyCost[];
+    items: ItemQuantity<AnyItem>[];
 }
 interface ShopPurchaseModificationData {
     /** The ID of the purchase to modify */
@@ -79,28 +101,43 @@ interface ShopPurchaseModificationData {
         gamemodeID: string;
         maximum: number;
     }[];
+    /** Replacement purchase requirements to apply the purchase */
+    purchaseRequirements?: {
+        gamemodeID: string;
+        newRequirements: AnyRequirementData[];
+    }[];
+    /** Replacement purchase costs to apply the purchase */
+    cost?: {
+        gamemodeID: string;
+        newCosts: ShopCostData;
+    }[];
 }
 declare class ShopPurchase extends NamespacedObject implements SoftDataDependant<ShopPurchaseData> {
     get media(): string;
     get name(): string;
+    get englishName(): string;
+    get englishDescription(): string;
+    get hasCustomName(): boolean;
+    get hasCustomDescription(): boolean;
     get description(): string;
+    get hasDisabledModifier(): boolean;
+    get costs(): ShopCost;
+    get purchaseRequirements(): AnyRequirement[];
     _media: string;
     category: ShopCategory;
     contains: {
         items: AnyItemQuantity[];
         itemCharges?: EquipmentQuantity;
-        modifiers?: PlayerModifierObject;
         pet?: Pet;
         lootBox?: boolean;
+        bankTab?: boolean;
+        stats?: StatObject;
     };
-    costs: {
-        gp: ShopCostAmount;
-        slayerCoins: ShopCostAmount;
-        raidCoins: ShopCostAmount;
-        items: AnyItemQuantity[];
-    };
+    _costs: Map<Gamemode, ShopCost>;
+    _defaultCosts: ShopCost;
     unlockRequirements: ShopPurchaseRequirement[];
-    purchaseRequirements: AnyRequirement[];
+    _purchaseRequirements: Map<Gamemode, AnyRequirement[]>;
+    _defaultPurchaseRequirements: AnyRequirement[];
     currentDescription?: CurrentShopDescription;
     /** Purchase limit by Gamemode. If unset, no limit exists. */
     _buyLimitOverrides: Map<Gamemode, number>;
@@ -109,6 +146,7 @@ declare class ShopPurchase extends NamespacedObject implements SoftDataDependant
     showBuyLimit: boolean;
     _customName?: string;
     _customDescription?: string;
+    allowedGamemodes: Set<Gamemode>;
     constructor(namespace: DataNamespace, data: ShopPurchaseData, game: Game);
     registerSoftDependencies(data: ShopPurchaseData, game: Game): void;
     applyDataModification(modData: ShopPurchaseModificationData, game: Game): void;
@@ -117,6 +155,7 @@ declare class ShopPurchase extends NamespacedObject implements SoftDataDependant
     getTemplatedDescription(shop: Shop): string;
     /** Gets template data for the description */
     getDescriptionTemplateData(buyQuantity: number): StringDictionary<string>;
+    getCostsFromData(data: ShopCostData, game: Game): ShopCost;
 }
 declare class DummyShopPurchase extends ShopPurchase {
     constructor(namespace: DataNamespace, id: string, game: Game);
@@ -130,11 +169,13 @@ interface ShopUpgradeChainData extends IDData {
     /** Default description of the upgrade when none is owned */
     defaultDescription: string;
     /** Localization data for chainName */
-    chainNameLang?: LangStringData;
+    chainNameLang?: string;
     /** Localization data for defaultName */
-    defaultNameLang?: LangStringData;
+    defaultNameLang?: string;
     /** Localization data for defaultDescription */
-    descriptionLang?: LangStringData;
+    descriptionLang?: string;
+    /** The default media to show when none is owned */
+    defaultMedia?: string;
 }
 interface ShopUpgradeChainModificationData extends IDData {
     rootUpgradeID?: string;
@@ -144,12 +185,15 @@ declare class ShopUpgradeChain extends NamespacedObject {
     get chainName(): string;
     get defaultName(): string;
     get defaultDescription(): string;
+    get media(): string;
+    get defaultMedia(): string;
     _chainName: string;
-    chainNameLang?: LangStringData;
-    nameLang?: LangStringData;
-    descriptionLang?: LangStringData;
+    chainNameLang?: string;
+    nameLang?: string;
+    descriptionLang?: string;
     _defaultName: string;
     _defaultDescription: string;
+    _defaultMedia: string;
     constructor(namespace: DataNamespace, data: ShopUpgradeChainData, game: Game);
     applyDataModification(modData: ShopUpgradeChainModificationData, game: Game): void;
 }
@@ -158,10 +202,13 @@ declare class ShopRenderQueue {
     costs: boolean;
     upgrades: boolean;
 }
-declare class Shop implements EncodableObject, StatProvider, RaidStatProvider {
+declare type ShopEvents = {
+    purchaseMade: ShopPurchaseMadeEvent;
+};
+declare class Shop extends GameEventEmitter<ShopEvents> implements EncodableObject, IRaidStatProvider {
     game: Game;
-    modifiers: MappedModifiers;
-    raidStats: Required<Pick<StatProvider, 'modifiers'>>;
+    providedStats: StatProvider;
+    raidStats: StatProvider;
     /** Stores the number of times an upgrade has been purchased */
     upgradesPurchased: Map<ShopPurchase, number>;
     buyQuantity: number;
@@ -178,7 +225,6 @@ declare class Shop implements EncodableObject, StatProvider, RaidStatProvider {
     renderCosts(): void;
     renderRequirements(): void;
     renderUpgrades(): void;
-    initUpgradeChainDisplays(): void;
     postDataRegistration(): void;
     /** Gets the total number of upgrades purchased. If golbinRaid, returns for Raid, else for base game. */
     getTotalUpgradesPurchased(golbinRaid: boolean): number;
@@ -188,7 +234,7 @@ declare class Shop implements EncodableObject, StatProvider, RaidStatProvider {
     getQuickBuyPurchase(item: AnyItem): ShopPurchase | undefined;
     /** Starting with an upgrade, progresses down it's unlock requirements until a purchase that is owned is found. Returns undefined if no purchase found. */
     getLowestUpgradeInChain(purchase: ShopPurchase): ShopPurchase | undefined;
-    getTotalModifierInChain(purchase: ShopPurchase): MappedModifiers;
+    getTotalStatsInChain(purchase: ShopPurchase): StatObjectSummary;
     capPurchaseQuantity(purchase: ShopPurchase, buyQuantity: number): number;
     getPurchaseCosts(purchase: ShopPurchase, quantity: number): Costs;
     /** On click callback function for quick buying */
@@ -201,7 +247,7 @@ declare class Shop implements EncodableObject, StatProvider, RaidStatProvider {
     decode(reader: SaveWriter, version: number): void;
     computeProvidedStats(updatePlayers?: boolean): void;
     /** Gets the currency cost for a given purchase quantity */
-    getCurrencyCost(cost: ShopCostAmount, buyQuantity: number, boughtQuantity: number): number;
+    getCurrencyCost(cost: AnyShopCost, buyQuantity: number, boughtQuantity: number): number;
     getCurrentDescription(purchase: ShopPurchase): string;
     convertFromOldFormat(save: NewSaveGame, idMap: NumericIDMap): void;
     /** Removes purchases that are above their buy limit */

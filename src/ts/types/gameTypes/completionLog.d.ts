@@ -10,10 +10,13 @@ declare const enum ItemLogFilter {
     ShowDiscovered = 1,
     ShowUndiscovered = 2,
     ShowBaseGame = 3,
-    ShowTotH = 4
+    ShowTotH = 4,
+    ShowAoD = 5,
+    ShowItA = 6
 }
 /** Callback function for when one of the filter buttons in the item log is clicked */
 declare function filterItemLog(filter: ItemLogFilter): void;
+declare function toggleItemCompletionContainers(visible: Set<CompletionNamespace>): void;
 /** Callback function for changing which tab of the completion log to view */
 declare function showCompletionCategory(category: number): void;
 /** @deprecated Unused Callback Function */
@@ -28,9 +31,11 @@ interface CompletionLogMenuElements {
     skills: Map<AnySkill, SkillCompletionElement>;
     masterySkills: Map<SkillWithMastery<MasteryAction, MasterySkillData>, MasteryCompletionElement>;
     items: Map<AnyItem, ItemCompletionElement>;
+    itemContainers: Map<CompletionNamespace, HTMLDivElement>;
     monsters: Map<Monster, MonsterCompletionElement>;
     pets: Map<Pet, PetCompletionElement>;
-    skillProgress: Map<string, CompletionProgressElements>;
+    skillLevelProgress: Map<string, CompletionProgressElements>;
+    abyssalLevelProgress: Map<string, CompletionProgressElements>;
     masteryProgress: Map<string, CompletionProgressElements>;
     itemProgress: Map<string, CompletionProgressElements>;
     monsterProgress: Map<string, CompletionProgressElements>;
@@ -66,7 +71,7 @@ declare function promptGameReview(): void;
 declare let itemLogSearch: ItemSearch[];
 /** Initializes the item log search array data */
 declare function updateItemLogSearchArray(game: Game): void;
-declare class SkillCompletionElement extends HTMLElement {
+declare class SkillCompletionElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     viewMilestonesLink: HTMLAnchorElement;
     blockContainer: HTMLDivElement;
@@ -74,12 +79,19 @@ declare class SkillCompletionElement extends HTMLElement {
     skillName: HTMLHeadingElement;
     skillProgressFraction: HTMLSpanElement;
     skillProgressBar: HTMLDivElement;
+    levelContainers: HTMLElement[];
+    abyssalContainers: HTMLElement[];
+    abyssalLevelFraction: HTMLSpanElement;
+    abyssalProgressBar: HTMLDivElement;
     constructor();
     connectedCallback(): void;
     setSkill(skill: AnySkill): void;
     updateProgress(skill: AnySkill): void;
+    shouldShowLevels(skill: AnySkill): boolean;
+    shouldShowAbyssalLevels(skill: AnySkill): boolean;
+    updateVisibility(skill: AnySkill): void;
 }
-declare class MasteryCompletionElement extends HTMLElement {
+declare class MasteryCompletionElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     blockContainer: HTMLDivElement;
     skillImage: HTMLImageElement;
@@ -94,7 +106,7 @@ declare class MasteryCompletionElement extends HTMLElement {
     setSkill(skill: SkillWithMastery<MasteryAction, MasterySkillData>): void;
     updateProgress(skill: SkillWithMastery<MasteryAction, MasterySkillData>): void;
 }
-declare class ItemCompletionElement extends HTMLElement {
+declare class ItemCompletionElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     itemImage: HTMLImageElement;
     tooltip?: TippyTooltip;
@@ -104,7 +116,7 @@ declare class ItemCompletionElement extends HTMLElement {
     updateItem(item: AnyItem, game: Game): void;
     getItemTooltipHTML(item: AnyItem, game: Game): string;
 }
-declare class MonsterCompletionElement extends HTMLElement {
+declare class MonsterCompletionElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     monsterImage: HTMLImageElement;
     tooltip?: TippyTooltip;
@@ -114,7 +126,7 @@ declare class MonsterCompletionElement extends HTMLElement {
     updateMonster(monster: Monster, game: Game): void;
     getMonsterTooltipHTML(monster: Monster, game: Game): string;
 }
-declare class PetCompletionElement extends HTMLElement {
+declare class PetCompletionElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     petImage: HTMLImageElement;
     tooltip?: TippyTooltip;
@@ -133,9 +145,7 @@ declare class CompletionRenderQueue {
     pets: Set<Pet>;
     skills: Set<AnySkill>;
     masterySkills: Set<SkillWithMastery<MasteryAction, MasterySkillData>>;
-    totalProgressTrue: boolean;
-    totalProgressBaseGame: boolean;
-    totalProgressTotH: boolean;
+    totalProgress: Set<Namespaces>;
 }
 declare class CompletionProgress {
     currentCount: CompletionMap;
@@ -154,13 +164,29 @@ declare type CompletionNamespace = Namespaces | string;
 declare const enum VisibleCompletion {
     True = 0,
     BaseGame = 1,
-    TotH = 2
+    TotH = 2,
+    AoD = 3,
+    ItA = 4
 }
-declare class Completion implements EncodableObject {
+/** Event that fires when the completion percent in a given namespace changes */
+declare class CompletionPercentChangedEvent extends GameEvent {
+    namespace: string;
+    oldPercent: number;
+    newPercent: number;
+    constructor(namespace: string, oldPercent: number, newPercent: number);
+}
+declare type CompletionEvents = {
+    percentChanged: CompletionPercentChangedEvent;
+};
+declare class Completion extends GameEventEmitter<CompletionEvents> implements EncodableObject {
     game: Game;
     renderQueue: CompletionRenderQueue;
-    /** Percent progress to maximizing skills */
+    /** Percent progress to maximizing all skill levels */
     skillProgress: CompletionProgress;
+    /** Percent progress to maximum standard skill level */
+    skillLevelProgress: CompletionProgress;
+    /** Percent progress to maximum abyssal skill level */
+    abyssalLevelProgress: CompletionProgress;
     /** Percent progress to maximizing skill mastery */
     masteryProgress: CompletionProgress;
     /** Percent progress to item completion */
@@ -174,6 +200,8 @@ declare class Completion implements EncodableObject {
     get totalProgressTrue(): number;
     get totalProgressBaseGame(): number;
     get totalProgressTotH(): number;
+    get totalProgressAoD(): number;
+    get totalProgressItA(): number;
     /** The namespace to currently display the completion of */
     visibleCompletion: CompletionNamespace;
     constructor(game: Game);

@@ -1,11 +1,16 @@
 /// <reference types="sortablejs" />
-declare class BankItemIcon extends HTMLElement {
+declare const DRAG_DELAY_MS = 201;
+declare class BankItemIconElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     link: HTMLAnchorElement;
     image: HTMLImageElement;
     quantity: HTMLElement;
+    hasUpgrade: HTMLImageElement;
+    hasDowngrade: HTMLImageElement;
+    hasDamageType: HTMLImageElement;
     item?: AnyItem;
     tooltip?: TippyTooltip;
+    dragTimer: number;
     constructor();
     connectedCallback(): void;
     disconnectedCallback(): void;
@@ -15,6 +20,10 @@ declare class BankItemIcon extends HTMLElement {
     setGlow(isGlowing: boolean): void;
     addSelectionBorder(selectionMode: BankSelectionMode): void;
     removeSelectionBorder(selectionMode: BankSelectionMode): void;
+    onTouchStart(): void;
+    onTouchEnd(): void;
+    onTouchMove(e: TouchEvent): void;
+    clearDragTimer(): void;
 }
 interface BankTabElements {
     /** Parent Element for the tab */
@@ -30,7 +39,7 @@ interface BankTabElements {
     /** Sortable instance fo the itemContainer */
     containerSortable: Sortable;
 }
-declare class BankTabMenu extends HTMLElement {
+declare class BankTabMenuElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     tabContainer: HTMLUListElement;
     spaceFractionLabel: HTMLSpanElement;
@@ -46,20 +55,26 @@ declare class BankTabMenu extends HTMLElement {
     paneContainer: HTMLDivElement;
     tabs: BankTabElements[];
     /** All item icons that are currently present in the bank */
-    itemIcons: Map<AnyItem, BankItemIcon>;
+    itemIcons: Map<AnyItem, BankItemIconElement>;
     isSorting: boolean;
-    tabValueTooltip?: TippyTooltip;
-    bankValueTooltip?: TippyTooltip;
+    tabValueTooltips: TippyTooltip[];
+    bankValueTooltips: TippyTooltip[];
     constructor();
     connectedCallback(): void;
     disconnectedCallback(): void;
+    destroyTabTooltips(): void;
+    destroyBankTooltips(): void;
     getFromTabID(from: HTMLElement): number;
     /** Initializes the element with a bank object */
     initialize(bank: Bank): void;
+    /** Loads the tab menus, after the save has loaded */
+    loadTabs(bank: Bank): void;
     loadAllItems(bank: Bank): void;
+    updateTabCount(bank: Bank): void;
     addItemToEndofTab(bank: Bank, bankItem: BankItem): void;
     removeItemFromTab(item: AnyItem): void;
     sortTabByOrder(tabID: number, order: string[]): void;
+    toggleScrollableTabs(enableScrolling: boolean): void;
     /** Test function for validating DOM order matches game bank order */
     validateItemOrder(): void;
     /** Adds a selection border to the bank-item-icon corresponding to it*/
@@ -70,19 +85,25 @@ declare class BankTabMenu extends HTMLElement {
     moveIconsToNewTab(itemsToMove: BankItem[], newTabID: number): void;
     updateItemLockBorder(bankItem: BankItem, useDefaultBorder: boolean): void;
     updateItemGlow(bankItem: BankItem): void;
+    searchResultTabs?: Set<number>;
     /** Updates the bank search based on a search result */
-    updateForSearchResult(foundItems: Set<AnyItem>, foundTabs: Set<number>): void;
+    updateForSearchResult(foundItems: Set<AnyItem>, foundTabs: Set<number>, hideTabs: boolean): void;
+    updateTabsForSearch(foundTabs: Set<number>, hideTabs: boolean): void;
     /** Makes all bank items visible */
     showAllItems(): void;
     /** Sets the specified tabs image to the media string provided */
     setTabImage(tabID: number, media: string): void;
-    getValueTemplate(value: number): StringDictionary<string>;
     selectTab(tabID: number, bank: Bank): void;
     updateBankValue(bank: Bank): void;
     updateBankSpace(bank: Bank): void;
+    setTabValue(value: SparseNumericMap<Currency>): void;
+    setBankValue(value: SparseNumericMap<Currency>): void;
+    setValueLabel(label: HTMLElement, value: SparseNumericMap<Currency>): TippyTooltip[];
+    enableStickyBankTabs(): void;
+    disableStickyBankTabs(): void;
 }
 /** Dropdown menu for selecting a tab in the bank */
-declare class BankTabDropdownMenu extends HTMLElement {
+declare class BankTabDropdownMenuElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     tabImages: HTMLImageElement[];
     openButton: HTMLButtonElement;
@@ -95,9 +116,10 @@ declare class BankTabDropdownMenu extends HTMLElement {
      * @param optionSelectCallback The callback function when a tab option is selected
      */
     initialize(bank: Bank, optionSelectCallback: (tabID: number) => void): void;
+    updateTabCount(bank: Bank, optionSelectCallback: (tabID: number) => void): void;
     updateTabImages(bank: Bank): void;
 }
-declare class BankOptionsMenu extends HTMLElement {
+declare class BankOptionsMenuElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     sortButton: HTMLButtonElement;
     moveModeButton: HTMLButtonElement;
@@ -110,9 +132,9 @@ declare class BankOptionsMenu extends HTMLElement {
     setSearchNone(): void;
     setSearchNormal(): void;
 }
-declare class BankMoveModeMenu extends HTMLElement {
+declare class BankMoveModeMenuElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
-    tabSelection: BankTabDropdownMenu;
+    tabSelection: BankTabDropdownMenuElement;
     confirmMoveButton: HTMLButtonElement;
     selectionCount: HTMLSpanElement;
     tabSelectedToMove: number;
@@ -121,7 +143,7 @@ declare class BankMoveModeMenu extends HTMLElement {
     initialize(bank: Bank): void;
     updateSelectionCount(bank: Bank): void;
 }
-declare class BankSellModeMenu extends HTMLElement {
+declare class BankSellModeMenuElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     confirmSellButton: HTMLButtonElement;
     selectionCount: HTMLSpanElement;
@@ -160,7 +182,7 @@ declare class BankRangeSlider {
 }
 declare type BankSelectedItemAttribute = 'col-size';
 /** Component for displaying bank item information and interaction options */
-declare class BankSelectedItemMenu extends HTMLElement {
+declare class BankSelectedItemMenuElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     noneSelectedMessage: HTMLDivElement;
     selectedItemContainer: HTMLDivElement;
@@ -173,10 +195,11 @@ declare class BankSelectedItemMenu extends HTMLElement {
     itemDescription: HTMLElement;
     itemHealing: HTMLHeadingElement;
     viewStatsButton: HTMLHeadingElement;
+    itemWikiLink: HTMLButtonElement;
     specialAttackContainer: HTMLDivElement;
     specialAttackList: HTMLDivElement;
     upgradeContainer: HTMLDivElement;
-    upgradeText: HTMLHeadingElement;
+    upgradeText: HTMLSpanElement;
     upgradeButton: HTMLButtonElement;
     upgradeDropdownButton: HTMLButtonElement;
     upgradeOptionsContainer: HTMLDivElement;
@@ -196,10 +219,11 @@ declare class BankSelectedItemMenu extends HTMLElement {
     foodQuantitySlider: BankRangeSlider;
     equipFoodButton: HTMLButtonElement;
     openItemContainer: HTMLDivElement;
-    viewChestContentsButton: HTMLHeadingElement;
+    viewChestContentsButton: HTMLAnchorElement;
     openItemQuantitySlider: BankRangeSlider;
     openItemButton: HTMLButtonElement;
     buryItemContainer: HTMLDivElement;
+    buryItemHeader: HTMLHeadingElement;
     buryItemPrayerPoints: HTMLHeadingElement;
     buryItemQuantitySlider: BankRangeSlider;
     buryItemButton: HTMLButtonElement;
@@ -209,15 +233,19 @@ declare class BankSelectedItemMenu extends HTMLElement {
     claimTokenButton: HTMLButtonElement;
     useEightContainer: HTMLDivElement;
     useEightButton: HTMLButtonElement;
-    singleItemSalePrice: HTMLHeadingElement;
+    singleItemSalePrice: HTMLSpanElement;
     sellItemQuantitySlider: BankRangeSlider;
     customSellQuantity: HTMLInputElement;
     sellAllButOneButton: HTMLButtonElement;
     sellAllButton: HTMLButtonElement;
     sellItemButton: HTMLButtonElement;
+    totalSalePriceImage: HTMLImageElement;
     totalItemSalePrice: HTMLSpanElement;
+    upgradeIcon: HTMLImageElement;
+    downgradeIcon: HTMLImageElement;
     sizeElements: HTMLElement[];
     equipToSetButtons: HTMLButtonElement[];
+    itemConsumable: HTMLHeadingElement;
     handednessTooltip?: TippyTooltip;
     constructor();
     connectedCallback(): void;
@@ -226,7 +254,7 @@ declare class BankSelectedItemMenu extends HTMLElement {
     setItem(bankItem: BankItem, bank: Bank): void;
     createEquipToSetButtons(player: Player, item: EquipmentItem): void;
     updateEquipToSetHighlight(setID: number): void;
-    createReplaceItemHTML(item: EquipmentItem, player: Player): string;
+    createReplaceItemHTML(slot: EquipmentSlot, item: EquipmentItem, player: Player): string;
     createEquipItemButtons(item: EquipmentItem, player: Player): void;
     updateItemQuantity(bankItem: BankItem): void;
     /** Performs the necessary updates to the equip item display when player equipment changes */
@@ -239,7 +267,7 @@ declare class BankSelectedItemMenu extends HTMLElement {
     static colSizeClasses: StringDictionary<string[][]>;
 }
 /** Component for displaying bank item stats */
-declare class BankItemStatsMenu extends HTMLElement {
+declare class BankItemStatsMenuElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     selectedItemContainer: HTMLDivElement;
     itemImage: HTMLImageElement;
@@ -251,6 +279,7 @@ declare class BankItemStatsMenu extends HTMLElement {
     itemHealing: HTMLHeadingElement;
     viewStatsButton: HTMLHeadingElement;
     statsContainer: HTMLDivElement;
+    itemConsumable: HTMLHeadingElement;
     constructor();
     connectedCallback(): void;
     setUnselected(): void;
@@ -258,7 +287,7 @@ declare class BankItemStatsMenu extends HTMLElement {
     updateItemQuantity(bankItem: BankItem): void;
     setItemLocked(isLocked: boolean): void;
 }
-declare class BankMinibarToggle extends HTMLElement {
+declare class BankMinibarToggleElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     skillToggle: HTMLInputElement;
     skillLabel: HTMLLabelElement;
@@ -269,15 +298,15 @@ declare class BankMinibarToggle extends HTMLElement {
     setItem(item: EquipmentItem, skill: AnySkill, game: Game): void;
 }
 /** Component for displaying bank item settings */
-declare class BankItemSettingsMenu extends HTMLElement {
+declare class BankItemSettingsMenuElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     selectedItemContainer: HTMLDivElement;
-    selectTabIconDropdown: BankTabDropdownMenu;
+    selectTabIconDropdown: BankTabDropdownMenuElement;
     minibarSettingsContainer: HTMLDivElement;
     minibarSettingsToggles: HTMLDivElement;
     unlockAllButton: HTMLButtonElement;
     lockAllButton: HTMLButtonElement;
-    minibarToggles: Map<AnySkill, BankMinibarToggle>;
+    minibarToggles: Map<AnySkill, BankMinibarToggleElement>;
     constructor();
     connectedCallback(): void;
     initialize(game: Game): void;
@@ -285,12 +314,12 @@ declare class BankItemSettingsMenu extends HTMLElement {
     setUnselected(): void;
 }
 /** Component to manage the three selected item menus in a tab-pane fashion */
-declare class BankSideBarMenu extends HTMLElement {
+declare class BankSidebarMenuElement extends HTMLElement implements CustomElement {
     _content: DocumentFragment;
     itemImage: HTMLImageElement;
-    selectedMenu: BankSelectedItemMenu;
-    statsMenu: BankItemStatsMenu;
-    settingsMenu: BankItemSettingsMenu;
+    selectedMenu: BankSelectedItemMenuElement;
+    statsMenu: BankItemStatsMenuElement;
+    settingsMenu: BankItemSettingsMenuElement;
     sidebarCloseButton: HTMLButtonElement;
     paneContainer: HTMLDivElement;
     constructor();
@@ -302,6 +331,62 @@ declare class BankSideBarMenu extends HTMLElement {
     setItem(bankItem: BankItem, game: Game): void;
     setUnselected(): void;
     initialize(game: Game): void;
+}
+declare class SummoningMaxHitElement extends HTMLElement implements CustomElement {
+    _content: DocumentFragment;
+    damageTypeMedia: HTMLImageElement;
+    damageTypeName: HTMLSpanElement;
+    maxHit: HTMLSpanElement;
+    maxHitDiff: HTMLSpanElement;
+    constructor();
+    connectedCallback(): void;
+    setDamageType(damageType: DamageType): void;
+    setValue(value: number): void;
+    hideDiff(): void;
+    setDiff(diff: number): void;
+}
+declare class ItemUpgradeMenuElement extends HTMLElement implements CustomElement {
+    _content: DocumentFragment;
+    itemName: HTMLHeadingElement;
+    itemImage: HTMLImageElement;
+    itemDescription: HTMLSpanElement;
+    specialAttackContainer: HTMLDivElement;
+    specialAttackList: HTMLDivElement;
+    equipRequirements: HTMLDivElement;
+    noStatsMessage: HTMLDivElement;
+    equipmentStatsContainer: HTMLDivElement;
+    attackSpeedContainer: HTMLDivElement;
+    summoningMaxHitContainer: HTMLDivElement;
+    equipStats: Record<EquipStatKey, HTMLSpanElement>;
+    equipStatDiffs: Record<EquipStatKey, HTMLSpanElement>;
+    upgradeMasteryRequirement: HTMLSpanElement;
+    upgradeMasteryLevel: HTMLSpanElement;
+    currencyCosts: HTMLSpanElement;
+    currencyTooltips: TippyTooltip[];
+    itemCosts: HTMLSpanElement;
+    itemTooltips: TippyTooltip[];
+    upgradeButtons: {
+        button: HTMLButtonElement;
+        quantity: number;
+    }[];
+    resistancesContainer: HTMLDivElement;
+    resistances: Map<DamageType, CharacterResistanceElement>;
+    summoningMaxHits: Map<DamageType, SummoningMaxHitElement>;
+    itemConsumable: HTMLHeadElement;
+    constructor();
+    connectedCallback(): void;
+    initResistances(game: Game): void;
+    setUpgrade(upgrade: ItemUpgrade, rootItem: AnyItem, bank: Bank, game: Game): void;
+    /** Sets the equipment stats of the upgraded item, and a comparison of them to the root item */
+    setEquipmentStats(upgradedItem: AnyItem, rootItem: AnyItem): void;
+    /** Sets special attacks the upgraded item has */
+    setSpecialAttacks(item: AnyItem): void;
+    /** Sets requirements to equip the upgraded item */
+    setEquipRequirements(item: AnyItem): void;
+    /** Sets the mastery requirement when upgrading potions */
+    setUpgradeMasteryRequirement(upgrade: ItemUpgrade, bank: Bank): void;
+    setUpgradeCosts(upgrade: ItemUpgrade, bank: Bank, game: Game): void;
+    setUpgradeButtons(upgrade: ItemUpgrade, bank: Bank): void;
 }
 declare function openBankSidebar(): void;
 declare function closeBankSidebar(): void;
