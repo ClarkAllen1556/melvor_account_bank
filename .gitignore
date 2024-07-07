@@ -128,3 +128,7 @@ dist
 
 # Other
 package/
+server/fly.toml
+server/pb_data/data.db
+server/pb_data/logs.db
+server/pb_data/types.d.ts

@@ -7,7 +7,7 @@ import { ShareBank } from "../components/ShareBank";
 import "../css/styles.css";
 
 export async function setup(ctx: Modding.ModContext) {
-  ctx.patch(BankTabMenu, "initialize").after(() => {
+  ctx.patch(BankTabMenuElement, "initialize").after(() => {
     const root = document.createElement("div");
     render(<ShareBank ctx={ctx} />, root);
 
@@ -33,15 +33,15 @@ export async function setup(ctx: Modding.ModContext) {
       .appendChild(openShareBankRoot);
   });
 
-  ctx.patch(BankItemSettingsMenu, "setItem").after((_, item, game) => {
+  ctx.patch(BankItemSettingsMenuElement, "setItem").after((_, item, game) => {
     selectedBankItem.value = item;
   });
 
-  ctx.patch(BankItemSettingsMenu, "setUnselected").after(() => {
+  ctx.patch(BankItemSettingsMenuElement, "setUnselected").after(() => {
     selectedBankItem.value = null;
   });
 
-  ctx.patch(BankItemSettingsMenu, "initialize").after((returnValue, game) => {
+  ctx.patch(BankItemSettingsMenuElement, "initialize").after((returnValue, game) => {
     const root = document.createElement("div");
     root.classList.add('col-13')
 
